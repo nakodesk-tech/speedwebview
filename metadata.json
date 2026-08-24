@@ -1,0 +1,6 @@
+{
+  "name": "DIKSHA Speed Controller",
+  "description": "Direct HTML5 video speed controller (1x-10x) for DIKSHA web courses inside dedicated Android WebView",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

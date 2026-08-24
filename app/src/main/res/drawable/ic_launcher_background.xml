@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="0"
+                android:startY="0"
+                android:endX="108"
+                android:endY="108"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#0F172A" />
+                <item android:offset="0.5" android:color="#1E1B4B" />
+                <item android:offset="1.0" android:color="#312E81" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Speed streaks background accents -->
+    <path
+        android:fillColor="#15FFFFFF"
+        android:pathData="M15,25 L93,25 A2,2 0 0,1 95,27 L95,28 A2,2 0 0,1 93,30 L15,30 Z" />
+    <path
+        android:fillColor="#226366F1"
+        android:pathData="M25,54 L83,54 A3,3 0 0,1 86,57 L86,57 A3,3 0 0,1 83,60 L25,60 Z" />
+    <path
+        android:fillColor="#15FFFFFF"
+        android:pathData="M20,80 L88,80 A2,2 0 0,1 90,82 L90,83 A2,2 0 0,1 88,85 L20,85 Z" />
+</vector>

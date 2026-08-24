@@ -1,0 +1,65 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.9"
+        android:scaleY="0.9"
+        android:translateX="5.4"
+        android:translateY="5.4">
+        <!-- Outer Speed Arc / Meter Gauge -->
+        <path
+            android:strokeWidth="4"
+            android:strokeColor="#38BDF8"
+            android:strokeLineCap="round"
+            android:fillColor="#00000000"
+            android:pathData="M 33 70 A 26 26 0 1 1 75 70" />
+
+        <!-- Gauge tick marks -->
+        <path
+            android:strokeWidth="2.5"
+            android:strokeColor="#818CF8"
+            android:strokeLineCap="round"
+            android:pathData="M 34 68 L 39 64 M 54 28 L 54 34 M 74 68 L 69 64" />
+
+        <!-- Double Fast Forward Play Arrows with Gradient -->
+        <!-- First arrow -->
+        <path
+            android:pathData="M 38 42 L 52 53.5 L 38 65 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:startX="38"
+                    android:startY="42"
+                    android:endX="52"
+                    android:endY="65"
+                    android:type="linear">
+                    <item android:offset="0.0" android:color="#60A5FA" />
+                    <item android:offset="1.0" android:color="#3B82F6" />
+                </gradient>
+            </aapt:attr>
+        </path>
+
+        <!-- Second arrow (speed lead) -->
+        <path
+            android:pathData="M 52 42 L 67 53.5 L 52 65 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:startX="52"
+                    android:startY="42"
+                    android:endX="67"
+                    android:endY="65"
+                    android:type="linear">
+                    <item android:offset="0.0" android:color="#38BDF8" />
+                    <item android:offset="1.0" android:color="#06B6D4" />
+                </gradient>
+            </aapt:attr>
+        </path>
+
+        <!-- 10x Speed Badge / Bolt -->
+        <path
+            android:fillColor="#FACC15"
+            android:pathData="M 68 33 L 63 43 L 69 43 L 65 52 L 75 41 L 69 41 Z" />
+    </group>
+</vector>
