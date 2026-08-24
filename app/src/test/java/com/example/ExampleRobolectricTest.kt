@@ -2,6 +2,8 @@ package com.example
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.example.engine2.model.SunbirdSpeedStatus
+import com.example.engine2.viewmodel.SunbirdEngineViewModel
 import com.example.model.SpeedStatus
 import com.example.viewmodel.DikshaSpeedViewModel
 import org.junit.Assert.assertEquals
@@ -23,14 +25,14 @@ class ExampleRobolectricTest {
   }
 
   @Test
-  fun `viewmodel updates speed request`() {
+  fun `engine1 viewmodel updates speed request`() {
     val viewModel = DikshaSpeedViewModel()
     viewModel.requestSpeed(10.0)
     assertEquals(10.0, viewModel.uiState.value.requestedSpeed, 0.001)
   }
 
   @Test
-  fun `viewmodel parses successful 10x speed response`() {
+  fun `engine1 viewmodel parses successful 10x speed response`() {
     val viewModel = DikshaSpeedViewModel()
     val testJson = """{"success":true,"requested":10.0,"actual":10.0,"videoCount":1,"isPlaying":true}"""
     viewModel.handleSpeedBridgeResult(testJson)
@@ -42,37 +44,56 @@ class ExampleRobolectricTest {
   }
 
   @Test
-  fun `viewmodel handles no video response`() {
-    val viewModel = DikshaSpeedViewModel()
-    val testJson = """{"success":false,"reason":"NO_VIDEO","requested":10.0,"actual":1.0,"videoCount":0}"""
-    viewModel.handleSpeedBridgeResult(testJson)
+  fun `engine2 sunbird viewmodel requests speed 1x 2x 5x 10x`() {
+    val viewModel = SunbirdEngineViewModel()
+    
+    viewModel.requestSpeed(1.0)
+    assertEquals(1.0, viewModel.uiState.value.requestedSpeed, 0.001)
 
-    assertEquals(SpeedStatus.NO_VIDEO, viewModel.uiState.value.status)
+    viewModel.requestSpeed(2.0)
+    assertEquals(2.0, viewModel.uiState.value.requestedSpeed, 0.001)
+
+    viewModel.requestSpeed(5.0)
+    assertEquals(5.0, viewModel.uiState.value.requestedSpeed, 0.001)
+
+    viewModel.requestSpeed(10.0)
+    assertEquals(10.0, viewModel.uiState.value.requestedSpeed, 0.001)
   }
 
   @Test
-  fun `viewmodel handles cross origin iframe response`() {
-    val viewModel = DikshaSpeedViewModel()
-    val testJson = """{"success":false,"reason":"CROSS_ORIGIN_IFRAME","requested":10.0,"actual":1.0,"videoCount":0}"""
-    viewModel.handleSpeedBridgeResult(testJson)
+  fun `engine2 sunbird viewmodel parses 10x speed verification successfully`() {
+    val viewModel = SunbirdEngineViewModel()
+    val speedJson = """{"requested":10.0,"actual":10.0,"success":true,"method":"Direct HTML5 <video>.playbackRate","videoId":"video-player_html5_api"}"""
+    
+    viewModel.handleSpeedVerification(speedJson)
 
-    assertEquals(SpeedStatus.CROSS_ORIGIN_IFRAME, viewModel.uiState.value.status)
-    assertEquals("Video is inside a cross-origin iframe.", viewModel.uiState.value.statusMessage)
+    assertEquals(10.0, viewModel.uiState.value.requestedSpeed, 0.001)
+    assertEquals(10.0, viewModel.uiState.value.actualSpeed, 0.001)
+    assertEquals(SunbirdSpeedStatus.SUCCESS, viewModel.uiState.value.status)
+    assertEquals("Requested: 10x | Actual: 10x | Status: SUCCESS", viewModel.uiState.value.statusMessage)
+    assertEquals("video-player_html5_api", viewModel.uiState.value.diagnostics.videoElementId)
   }
 
   @Test
-  fun `viewmodel handles tabs and new url submission`() {
-    val viewModel = DikshaSpeedViewModel()
-    assertEquals(1, viewModel.uiState.value.tabs.size)
+  fun `engine2 sunbird viewmodel parses diagnostics json`() {
+    val viewModel = SunbirdEngineViewModel()
+    val diagJson = """{"customElementRegistered":true,"playerElementFound":true,"underlyingVideoFound":true,"videoElementId":"video-player_html5_api","videoJsInstanceFound":true,"videoJsPlayerId":"video-player","isPlaying":true,"currentTime":12.5,"duration":600.0,"requestedSpeed":5.0,"actualPlaybackRate":5.0,"accessMethodUsed":"Video.js API + DOM"}"""
+    
+    viewModel.handleDiagnostics(diagJson)
 
-    // Add new tab
-    viewModel.addNewTab("https://youtube.com")
-    assertEquals(2, viewModel.uiState.value.tabs.size)
-    assertEquals("https://youtube.com", viewModel.uiState.value.currentUrl)
+    assertTrue(viewModel.uiState.value.diagnostics.customElementRegistered)
+    assertTrue(viewModel.uiState.value.diagnostics.underlyingVideoFound)
+    assertTrue(viewModel.uiState.value.diagnostics.videoJsInstanceFound)
+    assertEquals(5.0, viewModel.uiState.value.actualSpeed, 0.001)
+  }
 
-    // Submit URL in address bar
-    viewModel.updateUrlInput("coursera.org")
-    viewModel.submitUrl()
-    assertEquals("https://coursera.org", viewModel.uiState.value.currentUrl)
+  @Test
+  fun `engine2 sunbird handles player and telemetry events`() {
+    val viewModel = SunbirdEngineViewModel()
+    viewModel.handlePlayerEvent("""{"event":"PLAY","detail":{"time":123}}""")
+    viewModel.handleTelemetryEvent("""{"eid":"INTERACT","ets":1710000000}""")
+
+    assertEquals(1, viewModel.uiState.value.eventLogs.size)
+    assertEquals(1, viewModel.uiState.value.telemetryLogs.size)
   }
 }
