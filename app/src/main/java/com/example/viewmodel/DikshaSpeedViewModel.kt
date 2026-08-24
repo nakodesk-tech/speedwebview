@@ -7,6 +7,7 @@ import com.example.model.DiagnosticsInfo
 import com.example.model.SpeedResult
 import com.example.model.SpeedStatus
 import com.example.model.SpeedUiState
+import com.example.model.WebTab
 import com.example.script.DikshaScript
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import java.util.UUID
 
 class DikshaSpeedViewModel : ViewModel() {
 
@@ -38,10 +40,122 @@ class DikshaSpeedViewModel : ViewModel() {
         webViewRef = null
     }
 
-    fun onPageStarted(url: String) {
-        _uiState.update {
-            it.copy(
+    fun updateUrlInput(text: String) {
+        _uiState.update { it.copy(urlInputText = text) }
+    }
+
+    fun submitUrl(input: String? = null) {
+        val target = (input ?: _uiState.value.urlInputText).trim()
+        if (target.isEmpty()) return
+
+        val formattedUrl = when {
+            target.startsWith("http://") || target.startsWith("https://") -> target
+            target.contains(".") && !target.contains(" ") -> "https://$target"
+            else -> "https://www.google.com/search?q=${java.net.URLEncoder.encode(target, "UTF-8")}"
+        }
+
+        _uiState.update { state ->
+            val updatedTabs = state.tabs.map { tab ->
+                if (tab.id == state.activeTabId) tab.copy(url = formattedUrl, title = extractHostOrTitle(formattedUrl)) else tab
+            }
+            state.copy(
+                currentUrl = formattedUrl,
+                urlInputText = formattedUrl,
+                tabs = updatedTabs
+            )
+        }
+
+        webViewRef?.loadUrl(formattedUrl)
+    }
+
+    fun addNewTab(url: String = "https://learning.diksha.gov.in/") {
+        val newTab = WebTab(
+            id = UUID.randomUUID().toString(),
+            title = extractHostOrTitle(url),
+            url = url
+        )
+        _uiState.update { state ->
+            state.copy(
+                tabs = state.tabs + newTab,
+                activeTabId = newTab.id,
                 currentUrl = url,
+                urlInputText = url,
+                status = SpeedStatus.PENDING
+            )
+        }
+        webViewRef?.loadUrl(url)
+    }
+
+    fun selectTab(tabId: String) {
+        val targetTab = _uiState.value.tabs.firstOrNull { it.id == tabId } ?: return
+        if (targetTab.id == _uiState.value.activeTabId) return
+
+        _uiState.update { state ->
+            state.copy(
+                activeTabId = targetTab.id,
+                currentUrl = targetTab.url,
+                urlInputText = targetTab.url,
+                status = SpeedStatus.PENDING
+            )
+        }
+        webViewRef?.loadUrl(targetTab.url)
+    }
+
+    fun closeTab(tabId: String) {
+        _uiState.update { state ->
+            val remainingTabs = state.tabs.filterNot { it.id == tabId }
+            if (remainingTabs.isEmpty()) {
+                val fallbackTab = WebTab(
+                    id = UUID.randomUUID().toString(),
+                    title = "DIKSHA",
+                    url = "https://learning.diksha.gov.in/"
+                )
+                webViewRef?.loadUrl(fallbackTab.url)
+                state.copy(
+                    tabs = listOf(fallbackTab),
+                    activeTabId = fallbackTab.id,
+                    currentUrl = fallbackTab.url,
+                    urlInputText = fallbackTab.url
+                )
+            } else {
+                val nextActive = if (state.activeTabId == tabId) {
+                    remainingTabs.last().id
+                } else {
+                    state.activeTabId
+                }
+                val activeTab = remainingTabs.first { it.id == nextActive }
+                if (state.activeTabId == tabId) {
+                    webViewRef?.loadUrl(activeTab.url)
+                }
+                state.copy(
+                    tabs = remainingTabs,
+                    activeTabId = nextActive,
+                    currentUrl = activeTab.url,
+                    urlInputText = activeTab.url
+                )
+            }
+        }
+    }
+
+    fun onPageTitleChanged(title: String?) {
+        if (title.isNullOrBlank()) return
+        _uiState.update { state ->
+            val updatedTabs = state.tabs.map { tab ->
+                if (tab.id == state.activeTabId) tab.copy(title = title) else tab
+            }
+            state.copy(tabs = updatedTabs)
+        }
+    }
+
+    fun onPageStarted(url: String) {
+        _uiState.update { state ->
+            val updatedTabs = state.tabs.map { tab ->
+                if (tab.id == state.activeTabId) tab.copy(url = url, title = extractHostOrTitle(url)) else tab
+            }
+            state.copy(
+                currentUrl = url,
+                urlInputText = url,
+                tabs = updatedTabs,
                 isPageLoading = true,
                 pageProgress = 10,
                 status = SpeedStatus.PENDING,
@@ -60,9 +174,14 @@ class DikshaSpeedViewModel : ViewModel() {
     }
 
     fun onPageFinished(url: String, canGoBack: Boolean, canGoForward: Boolean) {
-        _uiState.update {
-            it.copy(
+        _uiState.update { state ->
+            val updatedTabs = state.tabs.map { tab ->
+                if (tab.id == state.activeTabId) tab.copy(url = url) else tab
+            }
+            state.copy(
                 currentUrl = url,
+                urlInputText = url,
+                tabs = updatedTabs,
                 isPageLoading = false,
                 pageProgress = 100,
                 canGoBack = canGoBack,
@@ -136,11 +255,7 @@ class DikshaSpeedViewModel : ViewModel() {
     }
 
     fun loadUrl(url: String) {
-        var formatted = url.trim()
-        if (!formatted.startsWith("http://") && !formatted.startsWith("https://")) {
-            formatted = "https://$formatted"
-        }
-        webViewRef?.loadUrl(formatted)
+        submitUrl(url)
     }
 
     fun goBack() {
@@ -160,7 +275,7 @@ class DikshaSpeedViewModel : ViewModel() {
     }
 
     fun goHome() {
-        webViewRef?.loadUrl("https://learning.diksha.gov.in/")
+        submitUrl("https://learning.diksha.gov.in/")
     }
 
     private fun injectAndReapplySpeed() {
@@ -258,7 +373,6 @@ class DikshaSpeedViewModel : ViewModel() {
             val isCrossOrigin = json.optBoolean("isCrossOriginIframe", false)
             val currentTime = json.optDouble("currentTime", 0.0)
             val duration = json.optDouble("duration", 0.0)
-            val statusStr = json.optString("status", "")
 
             val status = when {
                 videoFound && Math.abs(actualPlaybackRate - requestedSpeed) < 0.01 -> SpeedStatus.ACTIVE
@@ -303,6 +417,21 @@ class DikshaSpeedViewModel : ViewModel() {
             }
         } catch (e: Exception) {
             // Ignore parse errors from background poll
+        }
+    }
+
+    private fun extractHostOrTitle(url: String): String {
+        return try {
+            val uri = java.net.URI(url)
+            val host = uri.host ?: url
+            when {
+                host.contains("diksha.gov.in") -> "DIKSHA"
+                host.contains("youtube.com") || host.contains("youtu.be") -> "YouTube"
+                host.contains("google.com") -> "Search"
+                else -> host.removePrefix("www.").take(16)
+            }
+        } catch (e: Exception) {
+            "New Tab"
         }
     }
 

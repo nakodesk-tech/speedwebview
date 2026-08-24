@@ -59,4 +59,20 @@ class ExampleRobolectricTest {
     assertEquals(SpeedStatus.CROSS_ORIGIN_IFRAME, viewModel.uiState.value.status)
     assertEquals("Video is inside a cross-origin iframe.", viewModel.uiState.value.statusMessage)
   }
+
+  @Test
+  fun `viewmodel handles tabs and new url submission`() {
+    val viewModel = DikshaSpeedViewModel()
+    assertEquals(1, viewModel.uiState.value.tabs.size)
+
+    // Add new tab
+    viewModel.addNewTab("https://youtube.com")
+    assertEquals(2, viewModel.uiState.value.tabs.size)
+    assertEquals("https://youtube.com", viewModel.uiState.value.currentUrl)
+
+    // Submit URL in address bar
+    viewModel.updateUrlInput("coursera.org")
+    viewModel.submitUrl()
+    assertEquals("https://coursera.org", viewModel.uiState.value.currentUrl)
+  }
 }

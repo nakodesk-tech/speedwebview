@@ -1,5 +1,13 @@
 package com.example.model
 
+import java.util.UUID
+
+data class WebTab(
+    val id: String = UUID.randomUUID().toString(),
+    val title: String = "DIKSHA",
+    val url: String = "https://learning.diksha.gov.in/"
+)
+
 data class SpeedResult(
     val success: Boolean = false,
     val requested: Double = 1.0,
@@ -37,6 +45,9 @@ enum class SpeedStatus {
 
 data class SpeedUiState(
     val currentUrl: String = "https://learning.diksha.gov.in/",
+    val urlInputText: String = "https://learning.diksha.gov.in/",
+    val tabs: List<WebTab> = listOf(WebTab(id = "tab-default", title = "DIKSHA", url = "https://learning.diksha.gov.in/")),
+    val activeTabId: String = "tab-default",
     val requestedSpeed: Double = 1.0,
     val actualSpeed: Double = 1.0,
     val status: SpeedStatus = SpeedStatus.PENDING,
@@ -54,6 +65,9 @@ data class SpeedUiState(
 ) {
     val isActive: Boolean
         get() = status == SpeedStatus.ACTIVE && Math.abs(actualSpeed - requestedSpeed) < 0.01
+
+    val activeTab: WebTab?
+        get() = tabs.firstOrNull { it.id == activeTabId } ?: tabs.firstOrNull()
 }
 
 val PRESET_SPEEDS = listOf(
@@ -67,5 +81,6 @@ val PRESET_SPEEDS = listOf(
     4.0,
     5.0,
     7.5,
-    10.0
+    10.0,
+    16.0
 )

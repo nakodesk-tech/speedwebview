@@ -1,12 +1,9 @@
 package com.example.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,22 +14,25 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
@@ -78,6 +78,7 @@ fun SpeedControlPanel(
     onOpenDiagnostics: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showDropdownMenu by remember { mutableStateOf(false) }
     var showCustomSlider by remember { mutableStateOf(false) }
 
     val isActuallyActive = uiState.status == SpeedStatus.ACTIVE &&
@@ -87,156 +88,35 @@ fun SpeedControlPanel(
         modifier = modifier
             .fillMaxWidth()
             .shadow(
-                elevation = 20.dp,
-                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                elevation = 12.dp,
+                shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
                 spotColor = Color(0x1F000000)
             )
             .testTag("speed_control_panel"),
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MinimalBorder.copy(alpha = 0.6f))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 18.dp)
+                .padding(horizontal = 14.dp, vertical = 8.dp)
         ) {
-            // Top Section: Output summary & Target
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Bottom,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                // Left: Current Output
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(
-                        text = "CURRENT OUTPUT",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MinimalTextMuted,
-                        letterSpacing = 1.sp
-                    )
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = "${formatSpeedNumber(if (isActuallyActive) uiState.actualSpeed else uiState.requestedSpeed)}x",
-                            fontSize = 30.sp,
-                            fontWeight = FontWeight.Black,
-                            color = MinimalBlueDark,
-                            letterSpacing = (-0.5).sp
-                        )
-
-                        // Status Pill Badge
-                        val badgeBg = when {
-                            isActuallyActive -> StatusActiveGreenBg
-                            uiState.status == SpeedStatus.CROSS_ORIGIN_IFRAME -> StatusErrorRedBg
-                            uiState.status == SpeedStatus.NO_VIDEO -> Color(0xFFF1F5F9)
-                            else -> StatusWarningAmberBg
-                        }
-                        val badgeText = when {
-                            isActuallyActive -> StatusActiveGreen
-                            uiState.status == SpeedStatus.CROSS_ORIGIN_IFRAME -> StatusErrorRed
-                            uiState.status == SpeedStatus.NO_VIDEO -> MinimalTextSecondary
-                            else -> StatusWarningAmber
-                        }
-                        val badgeBorder = when {
-                            isActuallyActive -> StatusActiveGreenBorder
-                            uiState.status == SpeedStatus.CROSS_ORIGIN_IFRAME -> Color(0xFFFECACA)
-                            uiState.status == SpeedStatus.NO_VIDEO -> Color(0xFFE2E8F0)
-                            else -> Color(0xFFFDE68A)
-                        }
-
-                        Surface(
-                            shape = RoundedCornerShape(100.dp),
-                            color = badgeBg,
-                            border = BorderStroke(1.dp, badgeBorder),
-                            modifier = Modifier.testTag("active_speed_badge")
-                        ) {
-                            Text(
-                                text = when {
-                                    isActuallyActive -> "ACTIVE"
-                                    uiState.status == SpeedStatus.NO_VIDEO -> "NO VIDEO"
-                                    uiState.status == SpeedStatus.CROSS_ORIGIN_IFRAME -> "IFRAME"
-                                    else -> "SYNCING"
-                                },
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Black,
-                                color = badgeText,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                letterSpacing = 0.5.sp
-                            )
-                        }
-                    }
-                }
-
-                // Right: Target & Tools
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            text = "Target",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MinimalTextMuted
-                        )
-                        Text(
-                            text = "rate: ${formatSpeedNumber(uiState.requestedSpeed)}",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace,
-                            color = MinimalTextPrimary
-                        )
-                    }
-
-                    IconButton(
-                        onClick = { showCustomSlider = !showCustomSlider },
-                        modifier = Modifier
-                            .size(36.dp)
-                            .testTag("toggle_custom_slider_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Tune,
-                            contentDescription = "Slider Settings",
-                            tint = if (showCustomSlider) MinimalBlue else MinimalTextSecondary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-
-                    IconButton(
-                        onClick = onRefreshDiagnostics,
-                        modifier = Modifier
-                            .size(36.dp)
-                            .testTag("refresh_diagnostics_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh video detection",
-                            tint = MinimalTextSecondary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-            }
-
-            // Custom Slider Section (collapsible)
+            // Slider (expanded only when toggled)
             AnimatedVisibility(visible = showCustomSlider) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 10.dp)
+                        .padding(bottom = 8.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Continuous Speed Slider",
-                            fontSize = 12.sp,
+                            text = "Custom Continuous Speed",
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = MinimalTextSecondary
                         )
@@ -263,139 +143,227 @@ fun SpeedControlPanel(
                         ),
                         modifier = Modifier.testTag("speed_custom_slider")
                     )
+                    HorizontalDivider(color = MinimalBorder.copy(alpha = 0.5f))
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Grid of Speed Buttons
-            // Row 1: 1x, 1.25x, 1.5x, 1.75x
+            // Compact Main Bar Row
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                SpeedButton(1.0, uiState.requestedSpeed, onSpeedSelected, Modifier.weight(1f))
-                SpeedButton(1.25, uiState.requestedSpeed, onSpeedSelected, Modifier.weight(1f))
-                SpeedButton(1.5, uiState.requestedSpeed, onSpeedSelected, Modifier.weight(1f))
-                SpeedButton(1.75, uiState.requestedSpeed, onSpeedSelected, Modifier.weight(1f))
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Row 2: 2x, 2.5x, 3x, 4x
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                SpeedButton(2.0, uiState.requestedSpeed, onSpeedSelected, Modifier.weight(1f))
-                SpeedButton(2.5, uiState.requestedSpeed, onSpeedSelected, Modifier.weight(1f))
-                SpeedButton(3.0, uiState.requestedSpeed, onSpeedSelected, Modifier.weight(1f))
-                SpeedButton(4.0, uiState.requestedSpeed, onSpeedSelected, Modifier.weight(1f))
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Row 3: 5x, 7.5x, 10x Speed (Prominent)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                SpeedButton(5.0, uiState.requestedSpeed, onSpeedSelected, Modifier.weight(1f))
-                SpeedButton(7.5, uiState.requestedSpeed, onSpeedSelected, Modifier.weight(1f))
-
-                // Prominent 10x Button (spanning 2 column weights)
-                val is10xSelected = Math.abs(uiState.requestedSpeed - 10.0) < 0.01
-                Button(
-                    onClick = { onSpeedSelected(10.0) },
-                    modifier = Modifier
-                        .weight(2f)
-                        .height(44.dp)
-                        .testTag("quick_10x_button"),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (is10xSelected) MinimalBlue else MinimalBlue,
-                        contentColor = Color.White
-                    ),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Bolt,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = Color.White
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "10x Speed",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Minimalist Debug Bridge Card
-            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .clickable { onOpenDiagnostics() }
-                    .testTag("open_diagnostics_button"),
-                shape = RoundedCornerShape(16.dp),
-                color = MinimalSurfaceLow,
-                border = BorderStroke(1.dp, MinimalBorder)
+                    .height(44.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                // 1. Dropdown Menu for Speed Selection
+                Box {
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFFF1F5F9),
+                        border = BorderStroke(1.dp, MinimalBorder),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .clickable { showDropdownMenu = true }
+                            .testTag("speed_dropdown_trigger")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Speed,
+                                contentDescription = "Speed Menu",
+                                tint = MinimalBlue,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "Speed: ${formatSpeedNumber(uiState.requestedSpeed)}x",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MinimalBlueDark
+                            )
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = "Open Dropdown",
+                                tint = MinimalTextSecondary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    // Dropdown menu showing all speed presets
+                    DropdownMenu(
+                        expanded = showDropdownMenu,
+                        onDismissRequest = { showDropdownMenu = false },
+                        modifier = Modifier
+                            .background(Color.White)
+                            .testTag("speed_dropdown_menu")
                     ) {
                         Text(
-                            text = "DEBUG BRIDGE",
+                            text = "SELECT PLAYBACK SPEED",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Black,
                             color = MinimalTextMuted,
-                            letterSpacing = 1.sp
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            letterSpacing = 0.8.sp
                         )
 
+                        PRESET_SPEEDS.forEach { speed ->
+                            val isSelected = Math.abs(uiState.requestedSpeed - speed) < 0.01
+                            val label = "${formatSpeedNumber(speed)}x"
+
+                            DropdownMenuItem(
+                                text = {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = if (speed == 10.0) "10x (Ultra Fast)" else label,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isSelected) MinimalBlue else MinimalTextPrimary,
+                                            fontSize = 14.sp
+                                        )
+                                        if (isSelected) {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = "Selected",
+                                                tint = MinimalBlue,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                },
+                                onClick = {
+                                    onSpeedSelected(speed)
+                                    showDropdownMenu = false
+                                },
+                                modifier = Modifier.testTag("speed_dropdown_item_${label.replace(".", "_")}")
+                            )
+                        }
+                    }
+                }
+
+                // 2. Status Pill
+                val badgeBg = when {
+                    isActuallyActive -> StatusActiveGreenBg
+                    uiState.status == SpeedStatus.CROSS_ORIGIN_IFRAME -> StatusErrorRedBg
+                    uiState.status == SpeedStatus.NO_VIDEO -> Color(0xFFF1F5F9)
+                    else -> StatusWarningAmberBg
+                }
+                val badgeText = when {
+                    isActuallyActive -> StatusActiveGreen
+                    uiState.status == SpeedStatus.CROSS_ORIGIN_IFRAME -> StatusErrorRed
+                    uiState.status == SpeedStatus.NO_VIDEO -> MinimalTextSecondary
+                    else -> StatusWarningAmber
+                }
+                val badgeBorder = when {
+                    isActuallyActive -> StatusActiveGreenBorder
+                    uiState.status == SpeedStatus.CROSS_ORIGIN_IFRAME -> Color(0xFFFECACA)
+                    uiState.status == SpeedStatus.NO_VIDEO -> Color(0xFFE2E8F0)
+                    else -> Color(0xFFFDE68A)
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(100.dp),
+                    color = badgeBg,
+                    border = BorderStroke(1.dp, badgeBorder),
+                    modifier = Modifier.testTag("active_speed_badge")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(badgeText)
+                        )
                         Text(
-                            text = if (uiState.diagnostics.videoFound) "[VIDEO DETECTED]" else "[READY]",
-                            fontSize = 9.sp,
-                            fontFamily = FontFamily.Monospace,
+                            text = when {
+                                isActuallyActive -> "${formatSpeedNumber(uiState.actualSpeed)}x"
+                                uiState.status == SpeedStatus.NO_VIDEO -> "NO VIDEO"
+                                uiState.status == SpeedStatus.CROSS_ORIGIN_IFRAME -> "IFRAME"
+                                else -> "SYNC"
+                            },
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (uiState.diagnostics.videoFound) MinimalBlue else MinimalTextMuted
+                            color = badgeText,
+                            letterSpacing = 0.4.sp
+                        )
+                    }
+                }
+
+                // 3. Compact Quick Buttons (1x, 2x, 5x, 10x)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    CompactSpeedChip(1.0, uiState.requestedSpeed, onSpeedSelected)
+                    CompactSpeedChip(2.0, uiState.requestedSpeed, onSpeedSelected)
+                    CompactSpeedChip(5.0, uiState.requestedSpeed, onSpeedSelected)
+
+                    // Prominent Quick 10x button
+                    val is10x = Math.abs(uiState.requestedSpeed - 10.0) < 0.01
+                    Button(
+                        onClick = { onSpeedSelected(10.0) },
+                        modifier = Modifier
+                            .height(34.dp)
+                            .testTag("quick_10x_button"),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MinimalBlue,
+                            contentColor = Color.White
+                        ),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Bolt,
+                            contentDescription = null,
+                            modifier = Modifier.size(13.dp),
+                            tint = Color.White
+                        )
+                        Spacer(modifier = Modifier.width(2.dp))
+                        Text(
+                            text = "10x",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    // Slider Toggle
+                    IconButton(
+                        onClick = { showCustomSlider = !showCustomSlider },
+                        modifier = Modifier
+                            .size(30.dp)
+                            .testTag("toggle_custom_slider_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Tune,
+                            contentDescription = "Slider Settings",
+                            tint = if (showCustomSlider) MinimalBlue else MinimalTextSecondary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
 
-                    Text(
-                        text = "URL: ${if (uiState.currentUrl.length > 40) uiState.currentUrl.take(38) + "..." else uiState.currentUrl}",
-                        fontSize = 10.sp,
-                        fontFamily = FontFamily.Monospace,
-                        color = MinimalTextSecondary
-                    )
-
-                    Text(
-                        text = "Found: ${if (uiState.diagnostics.videoFound) "YES (HTML5 Video Element)" else "NO (Searching DOM...)"}",
-                        fontSize = 10.sp,
-                        fontFamily = FontFamily.Monospace,
-                        color = MinimalTextSecondary
-                    )
-
-                    Text(
-                        text = "Result: { success: ${isActuallyActive}, actual: ${formatSpeedNumber(uiState.actualSpeed)} }",
-                        fontSize = 10.sp,
-                        fontFamily = FontFamily.Monospace,
-                        color = MinimalTextSecondary
-                    )
+                    // Diagnostics Modal
+                    IconButton(
+                        onClick = onOpenDiagnostics,
+                        modifier = Modifier
+                            .size(30.dp)
+                            .testTag("open_diagnostics_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Developer Diagnostics",
+                            tint = MinimalTextSecondary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
             }
         }
@@ -403,30 +371,32 @@ fun SpeedControlPanel(
 }
 
 @Composable
-private fun SpeedButton(
+private fun CompactSpeedChip(
     speed: Double,
     currentSpeed: Double,
-    onSpeedSelected: (Double) -> Unit,
-    modifier: Modifier = Modifier
+    onSpeedSelected: (Double) -> Unit
 ) {
     val isSelected = Math.abs(currentSpeed - speed) < 0.01
     val label = formatSpeedNumber(speed) + "x"
 
     Surface(
-        modifier = modifier
-            .height(44.dp)
-            .clip(RoundedCornerShape(12.dp))
+        modifier = Modifier
+            .height(32.dp)
+            .clip(RoundedCornerShape(8.dp))
             .clickable { onSpeedSelected(speed) }
             .testTag("speed_chip_${label.replace(".", "_")}"),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(8.dp),
         color = if (isSelected) MinimalBlue else Color(0xFFF1F5F9),
         border = if (isSelected) null else BorderStroke(1.dp, Color(0xFFE2E8F0))
     ) {
-        Box(contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 0.dp),
+            contentAlignment = Alignment.Center
+        ) {
             Text(
                 text = label,
-                fontSize = 13.sp,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                fontSize = 11.sp,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                 color = if (isSelected) Color.White else MinimalTextPrimary
             )
         }
