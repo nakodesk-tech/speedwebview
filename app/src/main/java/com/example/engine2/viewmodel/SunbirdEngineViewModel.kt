@@ -26,14 +26,19 @@ class SunbirdEngineViewModel : ViewModel() {
 
     private var webViewRef: WebView? = null
     private var heartbeatJob: Job? = null
+    private var isLoaded: Boolean = false
 
     init {
         startDiagnosticsHeartbeat()
     }
 
     fun attachWebView(webView: WebView) {
+        val isFirstAttach = (webViewRef !== webView)
         webViewRef = webView
-        reloadCurrentPlayerConfig()
+        if (isFirstAttach && !isLoaded) {
+            isLoaded = true
+            reloadCurrentPlayerConfig()
+        }
     }
 
     fun detachWebView() {
@@ -124,7 +129,7 @@ class SunbirdEngineViewModel : ViewModel() {
 
         webViewRef?.post {
             webViewRef?.loadDataWithBaseURL(
-                "https://learning.diksha.gov.in/",
+                "file:///android_asset/sunbird/",
                 html,
                 "text/html",
                 "UTF-8",
@@ -144,8 +149,8 @@ class SunbirdEngineViewModel : ViewModel() {
     fun handlePlayerEvent(jsonStr: String) {
         try {
             val json = JSONObject(jsonStr)
-            val eventType = json.optString("event", "EVENT")
-            val msg = "Player Event: $eventType at ${System.currentTimeMillis()}"
+            val eventType = json.optString("type", json.optString("event", "EVENT"))
+            val msg = "Player Event: $eventType"
             _uiState.update { current ->
                 val updatedLogs = (listOf(msg) + current.eventLogs).take(30)
                 current.copy(eventLogs = updatedLogs)
@@ -179,16 +184,17 @@ class SunbirdEngineViewModel : ViewModel() {
     private fun parseSpeedVerificationJson(jsonStr: String) {
         try {
             val json = JSONObject(jsonStr)
-            val requested = json.optDouble("requested", _uiState.value.requestedSpeed)
-            val actual = json.optDouble("actual", 1.0)
+            val requested = json.optDouble("requestedSpeed", json.optDouble("requested", _uiState.value.requestedSpeed))
+            val actual = json.optDouble("actualSpeed", json.optDouble("actual", 1.0))
             val success = json.optBoolean("success", false)
-            val method = json.optString("method", "Direct Video playbackRate")
+            val method = json.optString("method", "Direct Video playbackRate & Video.js tech")
             val videoId = json.optString("videoId", "")
             val vjsId = json.optString("vjsPlayerId", "")
 
-            val status = if (success && Math.abs(actual - requested) < 0.01) {
+            val isMatch = Math.abs(actual - requested) < 0.01
+            val status = if (success && isMatch) {
                 SunbirdSpeedStatus.SUCCESS
-            } else if (Math.abs(actual - requested) >= 0.01) {
+            } else if (!isMatch) {
                 SunbirdSpeedStatus.RATE_MISMATCH
             } else {
                 SunbirdSpeedStatus.ERROR
@@ -225,9 +231,9 @@ class SunbirdEngineViewModel : ViewModel() {
     private fun parseDiagnosticsJson(jsonStr: String) {
         try {
             val json = JSONObject(jsonStr)
-            val customReg = json.optBoolean("customElementRegistered", false)
-            val playerElemFound = json.optBoolean("playerElementFound", false)
-            val videoFound = json.optBoolean("underlyingVideoFound", false)
+            val customReg = json.optBoolean("customElementRegistered", json.optBoolean("customElementDefined", false))
+            val playerElemFound = json.optBoolean("playerElementFound", json.optBoolean("playerElementPresent", false))
+            val videoFound = json.optBoolean("underlyingVideoFound", json.optBoolean("videoElementPresent", false))
             val videoId = json.optString("videoElementId", "")
             val vjsFound = json.optBoolean("videoJsInstanceFound", false)
             val vjsId = json.optString("videoJsPlayerId", "")
@@ -235,8 +241,8 @@ class SunbirdEngineViewModel : ViewModel() {
             val currentTime = json.optDouble("currentTime", 0.0)
             val duration = json.optDouble("duration", 0.0)
             val requested = json.optDouble("requestedSpeed", _uiState.value.requestedSpeed)
-            val actual = json.optDouble("actualPlaybackRate", 1.0)
-            val method = json.optString("accessMethodUsed", "")
+            val actual = json.optDouble("actualPlaybackRate", json.optDouble("currentPlaybackRate", 1.0))
+            val method = json.optString("accessMethodUsed", "Direct HTML5 Video Element & Video.js tech")
 
             val status = if (videoFound && Math.abs(actual - requested) < 0.01) {
                 SunbirdSpeedStatus.SUCCESS
@@ -245,7 +251,7 @@ class SunbirdEngineViewModel : ViewModel() {
             } else if (Math.abs(actual - requested) >= 0.01) {
                 SunbirdSpeedStatus.RATE_MISMATCH
             } else {
-                SunbirdSpeedStatus.PENDING
+                SunbirdSpeedStatus.READY
             }
 
             val diag = SunbirdDiagnostics(
@@ -261,7 +267,8 @@ class SunbirdEngineViewModel : ViewModel() {
                 requestedSpeed = requested,
                 actualPlaybackRate = actual,
                 accessMethodUsed = method,
-                status = status
+                status = status,
+                lastMessage = if (status == SunbirdSpeedStatus.SUCCESS) "Verified at speed ${formatSpeed(actual)}" else "Diagnostics active"
             )
 
             _uiState.update { current ->

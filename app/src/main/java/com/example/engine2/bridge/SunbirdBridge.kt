@@ -16,6 +16,11 @@ class SunbirdBridge(
     }
 
     @JavascriptInterface
+    fun onSpeedResult(jsonString: String) {
+        onSpeedVerificationCallback(jsonString)
+    }
+
+    @JavascriptInterface
     fun onDiagnostics(jsonString: String) {
         onDiagnosticsCallback(jsonString)
     }

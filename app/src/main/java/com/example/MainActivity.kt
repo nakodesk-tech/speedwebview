@@ -26,12 +26,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.example.engine2.ui.SunbirdEngineScreen
 import com.example.engine2.viewmodel.SunbirdEngineViewModel
 import com.example.ui.DikshaSpeedScreen
@@ -98,12 +100,36 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    // Active Screen Content
-                    Box(modifier = Modifier.weight(1f)) {
-                        if (selectedEngine == 1) {
-                            DikshaSpeedScreen(viewModel = engine1ViewModel)
-                        } else {
-                            SunbirdEngineScreen(viewModel = engine2ViewModel)
+                    // Persistent Dual-Engine Container: Keep both WebViews alive across switches
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                    ) {
+                        // Engine 1: Live DIKSHA Web Engine
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .zIndex(if (selectedEngine == 1) 2f else 0f)
+                                .alpha(if (selectedEngine == 1) 1f else 0f)
+                        ) {
+                            DikshaSpeedScreen(
+                                viewModel = engine1ViewModel,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        // Engine 2: Sunbird Video Player Web Component Lab
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .zIndex(if (selectedEngine == 2) 2f else 0f)
+                                .alpha(if (selectedEngine == 2) 1f else 0f)
+                        ) {
+                            SunbirdEngineScreen(
+                                viewModel = engine2ViewModel,
+                                modifier = Modifier.fillMaxSize()
+                            )
                         }
                     }
                 }
