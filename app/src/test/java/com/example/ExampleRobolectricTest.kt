@@ -2,8 +2,7 @@ package com.example
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import com.example.engine2.model.SunbirdSpeedStatus
-import com.example.engine2.viewmodel.SunbirdEngineViewModel
+import com.example.model.PRESET_SPEEDS
 import com.example.model.SpeedStatus
 import com.example.viewmodel.DikshaSpeedViewModel
 import org.junit.Assert.assertEquals
@@ -25,14 +24,22 @@ class ExampleRobolectricTest {
   }
 
   @Test
-  fun `engine1 viewmodel updates speed request`() {
+  fun `preset speeds list contains all required speeds`() {
+    val requiredSpeeds = listOf(1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0, 4.0, 5.0, 7.5, 10.0)
+    for (speed in requiredSpeeds) {
+      assertTrue("Speed $speed should be in preset speeds list", PRESET_SPEEDS.contains(speed))
+    }
+  }
+
+  @Test
+  fun `diksha viewmodel updates speed request`() {
     val viewModel = DikshaSpeedViewModel()
     viewModel.requestSpeed(10.0)
     assertEquals(10.0, viewModel.uiState.value.requestedSpeed, 0.001)
   }
 
   @Test
-  fun `engine1 viewmodel parses successful 10x speed response`() {
+  fun `diksha viewmodel parses successful 10x speed response`() {
     val viewModel = DikshaSpeedViewModel()
     val testJson = """{"success":true,"requested":10.0,"actual":10.0,"videoCount":1,"isPlaying":true}"""
     viewModel.handleSpeedBridgeResult(testJson)
@@ -44,56 +51,26 @@ class ExampleRobolectricTest {
   }
 
   @Test
-  fun `engine2 sunbird viewmodel requests speed 1x 2x 5x 10x`() {
-    val viewModel = SunbirdEngineViewModel()
+  fun `diksha viewmodel parses 5x and 7_5x speed responses`() {
+    val viewModel = DikshaSpeedViewModel()
     
-    viewModel.requestSpeed(1.0)
-    assertEquals(1.0, viewModel.uiState.value.requestedSpeed, 0.001)
-
-    viewModel.requestSpeed(2.0)
-    assertEquals(2.0, viewModel.uiState.value.requestedSpeed, 0.001)
-
-    viewModel.requestSpeed(5.0)
-    assertEquals(5.0, viewModel.uiState.value.requestedSpeed, 0.001)
-
-    viewModel.requestSpeed(10.0)
-    assertEquals(10.0, viewModel.uiState.value.requestedSpeed, 0.001)
-  }
-
-  @Test
-  fun `engine2 sunbird viewmodel parses 10x speed verification successfully`() {
-    val viewModel = SunbirdEngineViewModel()
-    val speedJson = """{"requested":10.0,"actual":10.0,"success":true,"method":"Direct HTML5 <video>.playbackRate","videoId":"video-player_html5_api"}"""
-    
-    viewModel.handleSpeedVerification(speedJson)
-
-    assertEquals(10.0, viewModel.uiState.value.requestedSpeed, 0.001)
-    assertEquals(10.0, viewModel.uiState.value.actualSpeed, 0.001)
-    assertEquals(SunbirdSpeedStatus.SUCCESS, viewModel.uiState.value.status)
-    assertEquals("Requested: 10x | Actual: 10x | Status: SUCCESS", viewModel.uiState.value.statusMessage)
-    assertEquals("video-player_html5_api", viewModel.uiState.value.diagnostics.videoElementId)
-  }
-
-  @Test
-  fun `engine2 sunbird viewmodel parses diagnostics json`() {
-    val viewModel = SunbirdEngineViewModel()
-    val diagJson = """{"customElementRegistered":true,"playerElementFound":true,"underlyingVideoFound":true,"videoElementId":"video-player_html5_api","videoJsInstanceFound":true,"videoJsPlayerId":"video-player","isPlaying":true,"currentTime":12.5,"duration":600.0,"requestedSpeed":5.0,"actualPlaybackRate":5.0,"accessMethodUsed":"Video.js API + DOM"}"""
-    
-    viewModel.handleDiagnostics(diagJson)
-
-    assertTrue(viewModel.uiState.value.diagnostics.customElementRegistered)
-    assertTrue(viewModel.uiState.value.diagnostics.underlyingVideoFound)
-    assertTrue(viewModel.uiState.value.diagnostics.videoJsInstanceFound)
+    val test5x = """{"success":true,"requested":5.0,"actual":5.0,"videoCount":1,"isPlaying":true}"""
+    viewModel.handleSpeedBridgeResult(test5x)
     assertEquals(5.0, viewModel.uiState.value.actualSpeed, 0.001)
+    assertTrue(viewModel.uiState.value.isActive)
+
+    val test7_5x = """{"success":true,"requested":7.5,"actual":7.5,"videoCount":1,"isPlaying":true}"""
+    viewModel.handleSpeedBridgeResult(test7_5x)
+    assertEquals(7.5, viewModel.uiState.value.actualSpeed, 0.001)
+    assertTrue(viewModel.uiState.value.isActive)
   }
 
   @Test
-  fun `engine2 sunbird handles player and telemetry events`() {
-    val viewModel = SunbirdEngineViewModel()
-    viewModel.handlePlayerEvent("""{"event":"PLAY","detail":{"time":123}}""")
-    viewModel.handleTelemetryEvent("""{"eid":"INTERACT","ets":1710000000}""")
+  fun `diksha viewmodel handles no video detected`() {
+    val viewModel = DikshaSpeedViewModel()
+    val testNoVideo = """{"success":false,"requested":2.0,"actual":1.0,"videoCount":0,"reason":"NO_VIDEO"}"""
+    viewModel.handleSpeedBridgeResult(testNoVideo)
 
-    assertEquals(1, viewModel.uiState.value.eventLogs.size)
-    assertEquals(1, viewModel.uiState.value.telemetryLogs.size)
+    assertEquals(SpeedStatus.NO_VIDEO, viewModel.uiState.value.status)
   }
 }
